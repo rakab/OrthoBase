@@ -6,7 +6,7 @@ authors = [
 ]
 description = "A module to perform the multiplet decomposition using Young tables and construct the corresponding projectors"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
