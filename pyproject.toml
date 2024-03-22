@@ -16,6 +16,8 @@ classifiers = [
 ]
 dependencies = ["z3-solver", "numpy"]
 
+[tool.setuptools.package-data]
+"OrthoBase.FORMData" = ["*"]
 
 [project.urls]
 Homepage = "https://github.com/pypa/sampleproject"
