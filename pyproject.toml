@@ -1,0 +1,26 @@
+[project]
+name = "OrthoBase"
+version = "0.1"
+authors = [
+  { name="Bakar Chargeishvili", email="bakar.chargeishvili@desy.de" },
+]
+description = "A module to perform the multiplet decomposition using Young tables and construct the corresponding projectors"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+	"Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Physics"
+]
+dependencies = ["z3-solver", "numpy"]
+
+
+[project.urls]
+Homepage = "https://github.com/pypa/sampleproject"
+Issues = "https://github.com/pypa/sampleproject/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
