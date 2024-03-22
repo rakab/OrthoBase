@@ -20,8 +20,8 @@ dependencies = ["z3-solver", "numpy"]
 "OrthoBase.FORMData" = ["*"]
 
 [project.urls]
-Homepage = "https://github.com/pypa/sampleproject"
-Issues = "https://github.com/pypa/sampleproject/issues"
+Homepage = "https://github.com/rakab/OrthoBase"
+Issues = "https://github.com/rakab/OrthoBase/issues"
 
 [build-system]
 requires = ["setuptools>=61.0"]
