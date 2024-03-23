@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+from importlib.resources import files as imp_files
 
 class Projectors(object):
     def __init__(self, multiplets, path):
@@ -24,6 +25,8 @@ class Projectors(object):
                 raise PermissionError("No write access for {0} directory!".format(path))
         else:
             raise FileNotFoundError("{0} directory does not exist!".format(path))
+        #Copy SUn.prc to the output dir
+        shutil.copy(imp_files('OrthoBase.FORMData').joinpath('SUn.prc'),self.path)
         print("########")
 
     @property
@@ -47,6 +50,9 @@ class Projectors(object):
         self._parallel_evaluation = value
 
     def run(self):
+        f_new = open(os.path.join(self.path,"new_projs.frm"), "w")
+        f_new.write(imp_files('OrthoBase.FORMData').joinpath('header.frm').read_text())
+        f_new.write('\n')
         for m in self.mults:
             #print("Constructing projector for ", m.dim)
             m.decompose()
@@ -58,7 +64,8 @@ class Projectors(object):
             #    n=n.parent1
             #print("Generation",gen)
             if self.mults.gen==m.first_occ:
-                self.proj_new(m)
+                f_new.write(self.proj_new(m))
+        f_new.close()
 
     def yng_proj(self, y, i):
         """
@@ -153,7 +160,8 @@ class Projectors(object):
             subtr += "P{0}+".format(pM.dim)
         subtr = subtr[:-1]
         subtr += ")"
-        proj = "L {0}={1}*{2}*{3}*{4}*{5}*{6}-{7};".format(proj_name,oldproj1,colfac1,oldproj2,colfac2,y1_code,y2_code,subtr)
+        proj = "L {0}={1}*{2}*{3}*{4}*{5}*{6}-{7};\n".format(proj_name,oldproj1,colfac1,oldproj2,colfac2,y1_code,y2_code,subtr)
         print(proj)
+        return(proj)
         #m.decomposition[1].print()
         #print(m.first_occ)
