@@ -66,6 +66,9 @@ class Projectors(object):
         """
         print("Projecting ",y.dim,y.part_cols,y.part_rows,y.table)
         code = ""
+        #symmetric combinations
+        #lhs contains the indices going inside the diagram
+        #rhs contains the indices coming out of the diagram
         for row,cols in enumerate(y.part_cols):
             lhs = "perm_(f1,"
             rhs = "f2("
@@ -80,6 +83,7 @@ class Projectors(object):
             lhs += ")"
             rhs += ")"
             code += "{0}*{1}*".format(lhs,rhs)
+        #asymmetric combinations
         for col,rows in enumerate(y.part_rows):
             lhs = "perm_(1,f1,"
             rhs = "f2("
@@ -143,7 +147,13 @@ class Projectors(object):
         colfac2 = colfac2.replace("rj","ii")
         y1_code=self.yng_proj(y2, "i")
         y2_code=self.yng_proj(y2, "j")
-        proj = "L {0}={1}*{2}*{3}*{4}*{5}*{6};".format(proj_name,oldproj1,colfac1,oldproj2,colfac2,y1_code,y2_code)
+        #Subtract the rest
+        subtr = "("
+        for pM in m.decomposition[2]:
+            subtr += "P{0}+".format(pM.dim)
+        subtr = subtr[:-1]
+        subtr += ")"
+        proj = "L {0}={1}*{2}*{3}*{4}*{5}*{6}-{7};".format(proj_name,oldproj1,colfac1,oldproj2,colfac2,y1_code,y2_code,subtr)
         print(proj)
         #m.decomposition[1].print()
         #print(m.first_occ)

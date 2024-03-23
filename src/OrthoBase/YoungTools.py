@@ -1,6 +1,6 @@
 import z3
 #import pickle
-#import copy
+import copy
 import numpy as np
 #from collections import Counter
 
@@ -211,11 +211,15 @@ class YoungTable(object):
         if n==0:
             a = None
             b = None
+            c = None
         else:
             a = self.__class__(self.part_rows[:l-n],self.Nc)
             b = self.__class__(self.part_rows[l-n:],self.Nc)
+            c=[m for m in a*b if m.dim != self.dim]
         self.first_occ = n
-        self.decomposition = (a,b)
+        #a and b are the antiquark and quark tables
+        #c contains all the projectors which have to be subtracted
+        self.decomposition = (a,b,c)
 
     def __copy__(self):
         copy_ = type(self).__new__(self.__class__)
