@@ -3,6 +3,9 @@ import z3
 import copy
 import numpy as np
 #from collections import Counter
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 from .utils import *
 database = {}
@@ -195,6 +198,7 @@ class YoungTable(object):
         operators as described in Appendix B of arXiv:1207.0609 + some
         optimization
         """
+        logger.debug(f"Decomposing of {self.dim}-{self.part_rows} into q qbar tables")
         conj_rows = list()
         for r in self.part_rows:
             conj_rows.append(self.Nc-r)
@@ -212,10 +216,12 @@ class YoungTable(object):
             a = None
             b = None
             c = None
+            logger.debug(f"Decomposition ended, firts occ: {n}")
         else:
             a = self.__class__(self.part_rows[:l-n],self.Nc)
             b = self.__class__(self.part_rows[l-n:],self.Nc)
             c=[m for m in a*b if m.dim != self.dim]
+            logger.debug(f"Decomposition ended, {self.dim}={a.dim}x{b.dim} firts occ: {n}")
         self.first_occ = n
         #a and b are the antiquark and quark tables
         #c contains all the projectors which have to be subtracted
@@ -266,7 +272,7 @@ class YoungTable(object):
         if rows > self.Nc:
             rows = self.Nc
         #print("multing",self.dim,other.dim)
-        print(rows,cols)
+        #print(rows,cols)
         for row in range(rows):
             for col in range(cols):
                 x[(row, col)] = z3.Int("x(%i,%i)" % (row, col))
@@ -348,6 +354,6 @@ class YoungTable(object):
             solutions.append(self.__class__(table,self.Nc,self,other))
             getDifferentSolutionMatrix(sol,mod,y,rows,cols)
             #break
-        print("# Solutions: ", num_solutions)
+        logger.debug(f"# Solutions: {num_solutions}")
         database[(tuple(self.part_cols),tuple(other.part_cols))] = solutions
         return(YoungTables(solutions))

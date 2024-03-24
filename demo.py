@@ -2,17 +2,20 @@
 import pickle
 from OrthoBase import YoungTools as YT
 from OrthoBase import Projectors as P
+import logging
+logging.basicConfig(level=logging.WARNING)
+logging.getLogger('OrthoBase').setLevel(logging.DEBUG)
 
 #Define number of colors
 Nc = 3
 #Define SU(3) octet (gluon)
 g = YT.YoungTable([Nc-1,1],Nc)
-ans = YT.YoungTable([2,2,2,2,1,1,1,1],Nc)
+#ans = YT.YoungTable([2,2,2,2,1,1,1,1],Nc)
 #ans = YT.YoungTable([2,2,2,2,2,2,1,1,1,1,1,1],Nc)
 #ans = YT.YoungTable([2,2,2,2,2,2,2,1,1,1,1],Nc)
-a = YT.YoungTable([2,2,2,2,2,2],Nc)
-b = YT.YoungTable([2,1,1,1,1],Nc)
-ans.print()
+#a = YT.YoungTable([2,2,2,2,2,2],Nc)
+#b = YT.YoungTable([2,1,1,1,1],Nc)
+#ans.print()
 #ans.decompose()
 #a.print()
 #b.print()
@@ -20,7 +23,7 @@ ans.print()
 #Perform the decomposition of gggggggggg state
 #multiplets = g*g*g*g*g*g*g*g*g*g*g
 #multiplets = g*g*g*g*g*g*g*g*g*g
-multiplets = g*g*g
+multiplets = g*g
 #print(multiplets[1].parent1.parent1, multiplets[1].parent2.dim)
 #Print information about the resulting multiplets
 print("#####################")

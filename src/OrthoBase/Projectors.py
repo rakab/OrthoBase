@@ -2,6 +2,10 @@ import os
 import sys
 import shutil
 from importlib.resources import files as imp_files
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 
 class Projectors(object):
     def __init__(self, multiplets, path):
@@ -71,7 +75,8 @@ class Projectors(object):
         """
         Construct a non-hermitian Young operator
         """
-        print("Projecting ",y.dim,y.part_cols,y.part_rows,y.table)
+        #print("Projecting ",y.dim,y.part_cols,y.part_rows,y.table)
+        logger.debug(f"Projecting {y.dim},{y.part_cols},{y.part_rows},{y.table}")
         code = ""
         #symmetric combinations
         #lhs contains the indices going inside the diagram
@@ -128,7 +133,7 @@ class Projectors(object):
         """
         y1 = m.decomposition[0]
         y2 = m.decomposition[1]
-        print("New proj {0}={1}x{2}".format(m.dim,m.parent1.dim,8),y1.dim,y2.dim)
+        print("New proj {0}={1}x{2} decomposed as {3}x{4}".format(m.dim,m.parent1.dim,8,y1.dim,y2.dim))
         m.print()
         proj_name = "P{0}(".format(m.dim)
         oldproj1 = "P{0}(".format(m.parent1.dim)
