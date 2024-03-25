@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import subprocess
 from importlib.resources import files as imp_files
 import logging
 logger = logging.getLogger(__name__)
@@ -54,9 +55,12 @@ class Projectors(object):
         self._parallel_evaluation = value
 
     def run(self):
+        logger.info("Building expressions of projectors")
         f_new = open(os.path.join(self.path,"new_projs.frm"), "w")
+        f_new_tmp = open(os.path.join(self.path,"new_projs_list.frm"), "w")
         f_new.write(imp_files('OrthoBase.FORMData').joinpath('header.frm').read_text())
         f_new.write('\n')
+        oldproj_names = "CF "
         for m in self.mults:
             #print("Constructing projector for ", m.dim)
             m.decompose()
@@ -68,8 +72,32 @@ class Projectors(object):
             #    n=n.parent1
             #print("Generation",gen)
             if self.mults.gen==m.first_occ:
-                f_new.write(self.proj_new(m))
+                proj, oldproj = self.proj_new(m)
+                f_new_tmp.write(proj)
+                oldproj_names += oldproj + ","
+        f_new.write(oldproj_names[:-1]+";\n\n")
+        f_new.write("#include new_projs_list.frm\n\n")
+        #f_new.write("L test = SUNT;")
+        f_new.write(imp_files('OrthoBase.FORMData').joinpath('footer.frm').read_text())
+        f_new_tmp.close()
         f_new.close()
+
+        logger.info("Starting to run FORM")
+        os.chdir(self.path)
+        process=subprocess.Popen(["tform","-w3","new_projs.frm"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        print("Program output:")
+        stdout_lines = []
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+            stdout_lines.append(line)
+        process.wait()
+
+        stdout = "".join(stdout_lines)
+
+        print(stdout)
+
 
     def yng_proj(self, y, i):
         """
@@ -119,6 +147,8 @@ class Projectors(object):
         creation history
 
         Notation:
+        i indices - quarks
+        j indices - antiquarks
                              Y
                            /  \
                           /i1  \ii1
@@ -131,23 +161,29 @@ class Projectors(object):
         mu.... ---------   ......  ----------------- nu...
                          \       /
         """
-        y1 = m.decomposition[0]
-        y2 = m.decomposition[1]
-        print("New proj {0}={1}x{2} decomposed as {3}x{4}".format(m.dim,m.parent1.dim,8,y1.dim,y2.dim))
+        y_qb = m.decomposition[0].conjugate()
+        y_q = m.decomposition[1]
+        print("New proj {0}={1}x{2} decomposed as {3}x{4}".format(m.dim,m.parent1.dim,8,y_qb.dim,y_q.dim))
         m.print()
-        proj_name = "P{0}(".format(m.dim)
-        oldproj1 = "P{0}(".format(m.parent1.dim)
+        #parents=",".join(obj.dim_txt for obj in reversed((lambda x: [x] + (lambda x: [x] + [x.parent1])(x.parent1) if x.parent1 else [x])(m)) if obj)
+        parents=",".join(obj.dim_txt for obj in reversed(m.parent_list()))+","+m.dim_txt
+        proj_name = "[P({0})]".format(parents)
+        all_indices = "("
+        #oldproj1 = "P[{0}](".format(m.parent1.dim)
+        oldproj_names = "CF "
+        oldproj = "[P({0})]".format(parents[:parents.rindex(',')])
+        oldproj1 = oldproj + "("
         colfac1 = ""
         for g in range(1,self.mults.gen):
-            proj_name += "mu{0},".format(g)
-            proj_name += "nu{0},".format(g)
+            all_indices += "mu{0},".format(g)
+            all_indices += "nu{0},".format(g)
             oldproj1 += "mu{0},".format(g)
             oldproj1 += "mmu{0},".format(g)
             colfac1 += "SUNT(mmu{0},i{0},j{0})*".format(g)
-        proj_name += "mu{0},".format(self.mults.gen)
-        proj_name += "nu{0},".format(self.mults.gen)
-        proj_name = proj_name[:-1]
-        proj_name += ")"
+        all_indices += "mu{0},".format(self.mults.gen)
+        all_indices += "nu{0},".format(self.mults.gen)
+        all_indices = all_indices[:-1]
+        all_indices += ")"
         oldproj1 = oldproj1[:-1]
         oldproj1 += ")"
         oldproj2 = oldproj1.replace("mu","nu")
@@ -157,16 +193,19 @@ class Projectors(object):
         colfac2 = colfac2.replace("j","rj")
         colfac2 = colfac2.replace("ri","jj")
         colfac2 = colfac2.replace("rj","ii")
-        y1_code=self.yng_proj(y2, "i")
-        y2_code=self.yng_proj(y2, "j")
+        y_q_code=self.yng_proj(y_q, "i")
+        y_qb_code=self.yng_proj(y_qb, "j")
         #Subtract the rest
         subtr = "("
         for pM in m.decomposition[2]:
-            subtr += "P{0}+".format(pM.dim)
+            subtr += "[P({0})]".format(parents[:parents.rindex(',')]+","+str(pM.dim))
+            oldproj += ",[P({0})]".format(parents[:parents.rindex(',')]+","+str(pM.dim))
+            subtr += f"{all_indices}+"
         subtr = subtr[:-1]
         subtr += ")"
-        proj = "L {0}={1}*{2}*{3}*{4}*{5}*{6}-{7};\n".format(proj_name,oldproj1,colfac1,oldproj2,colfac2,y1_code,y2_code,subtr)
+        proj_name += all_indices
+        proj = "L {0}={1}*{2}*{3}*{4}*{5}*{6}-{7};\n".format(proj_name,oldproj1,colfac1,oldproj2,colfac2,y_q_code,y_qb_code,subtr)
         print(proj)
-        return(proj)
+        return(proj,oldproj)
         #m.decomposition[1].print()
         #print(m.first_occ)

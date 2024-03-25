@@ -4,7 +4,7 @@ from OrthoBase import YoungTools as YT
 from OrthoBase import Projectors as P
 import logging
 logging.basicConfig(level=logging.WARNING)
-logging.getLogger('OrthoBase').setLevel(logging.DEBUG)
+logging.getLogger('OrthoBase').setLevel(logging.INFO)
 
 #Define number of colors
 Nc = 3

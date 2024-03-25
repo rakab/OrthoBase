@@ -17,6 +17,11 @@ class YoungTables(object):
         for sol in self.tables:
             dims.append(sol.dim)
             self.gen = g+1
+            conj_sol = sol.conjugate()
+            if len(sol.part_cols)>len(conj_sol.part_cols):
+                sol.dim_txt = str(sol.dim)+"b"
+            elif len(sol.part_cols)==len(conj_sol.part_cols) and sol.part_cols[-1] > conj_sol.part_cols[-1]:
+                sol.dim_txt = str(sol.dim)+"b"
         #Recalculate dimensions if n and n-bar exist
         #for i,d in enumerate(dims):
             #if i == 0:
@@ -129,6 +134,7 @@ class YoungTable(object):
             ##for col in ncols:
                 ##if row in
         self.dim = (self.calc_dim())
+        self.dim_txt = str(self.dim)
 
     def init_parents(self,parent1,parent2):
         if parent1 is not None and parent1.parent1 is not None:
@@ -162,7 +168,7 @@ class YoungTable(object):
 
     def print(self):
         #print(self.part_cols)
-        print("Dimension:", self.dim)
+        print(f"Y={self.part_rows} Dimension: {self.dim}")
         for row in range(self.dims[0]):
             for col in range(self.dims[1]):
                 #if self.table[col,row] != 0:
@@ -191,6 +197,14 @@ class YoungTable(object):
         conj_rows.append(self.Nc)
         conj_rows.reverse()
         return(self.__class__(conj_rows,self.Nc))
+
+    def parent_list(self):
+        parents = list()
+        p = self.parent1
+        while p != None:
+            parents.append(p)
+            p = p.parent1
+        return(parents)
 
     def decompose(self):
         """
