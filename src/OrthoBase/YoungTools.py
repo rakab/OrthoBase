@@ -1,8 +1,7 @@
 import z3
 #import pickle
 import copy
-import numpy as np
-#from collections import Counter
+from collections import Counter
 import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -64,19 +63,28 @@ class YoungTables(object):
         #YoungTables.gene += 1
         return(self.__class__(lst,self.gen))
 
-    def print(self):
+    def print(self,latex=False):
         dims=list()
         for sol in self.tables:
-            dims.append(sol.dim)
-        mults, counts = np.unique(dims, return_counts=True)
-        latex=""
+            dims.append(sol.dim_txt)
+        counts = Counter(dims)
+        sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: int(s[:-1]) if s.endswith('b') else int(s))(item[0])))
+        latex_code=""
         normal=""
-        for mult, count in np.c_[mults,counts]:
-            normal += "{1}*{0}+".format(mult,count)
-            latex += "{1}\\cdot {0}\\oplus".format(mult,count)
+        for mult, count in sorted_tables:
+            normal += "{0}*{1}+".format(count,mult)
+            if mult.endswith('b'):
+                latex_code += r"{0}\cdot \overline{{{1}}}\oplus ".format(count,mult[:-1])
+            else:
+                latex_code += r"{0}\cdot {1} \oplus ".format(count,mult)
+        latex_code = (lambda s: s.rsplit(' ', 1)[0])(latex_code[:-1])
         print("Total number of tables:", len(self.tables))
         print("Decomposition:")
-        print(normal[:-1])
+        if latex:
+            print(normal[:-1])
+            print(latex)
+        else:
+            print(normal[:-1])
 
     def __iter__(self):
         return iter(self.tables)
@@ -168,7 +176,7 @@ class YoungTable(object):
 
     def print(self):
         #print(self.part_cols)
-        print(f"Y={self.part_rows} Dimension: {self.dim}")
+        print(f"Y={self.part_rows} Dimension: {self.dim_txt}")
         for row in range(self.dims[0]):
             for col in range(self.dims[1]):
                 #if self.table[col,row] != 0:
