@@ -23,7 +23,7 @@ g = YT.YoungTable([Nc-1,1],Nc)
 #Perform the decomposition of gggggggggg state
 #multiplets = g*g*g*g*g*g*g*g*g*g*g
 #multiplets = g*g*g*g*g*g*g*g*g*g
-multiplets = g*g
+multiplets = g*g*g
 #print(multiplets[1].parent1.parent1, multiplets[1].parent2.dim)
 #Print information about the resulting multiplets
 print("#####################")

@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import subprocess
+from itertools import product
 from importlib.resources import files as imp_files
 import logging
 logger = logging.getLogger(__name__)
@@ -75,6 +76,8 @@ class Projectors(object):
                 proj, oldproj = self.proj_new(m)
                 f_new_tmp.write(proj)
                 oldproj_names += oldproj + ","
+            else:
+                self.proj_old(m)
         f_new.write(oldproj_names[:-1]+";\n\n")
         f_new.write("#include new_projs_list.frm\n\n")
         #f_new.write("L test = SUNT;")
@@ -96,7 +99,7 @@ class Projectors(object):
 
         stdout = "".join(stdout_lines)
 
-        print(stdout)
+        #print(stdout)
 
 
     def yng_proj(self, y, i):
@@ -163,7 +166,7 @@ class Projectors(object):
         """
         y_qb = m.decomposition[0].conjugate()
         y_q = m.decomposition[1]
-        print("New proj {0}={1}x{2} decomposed as {3}x{4}".format(m.dim,m.parent1.dim,8,y_qb.dim,y_q.dim))
+        print("New proj {0}={1}x{2} decomposed as {3}x{4}".format(m.dim_txt,m.parent1.dim_txt,8,y_qb.dim,y_q.dim))
         m.print()
         #parents=",".join(obj.dim_txt for obj in reversed((lambda x: [x] + (lambda x: [x] + [x.parent1])(x.parent1) if x.parent1 else [x])(m)) if obj)
         parents=",".join(obj.dim_txt for obj in reversed(m.parent_list()))+","+m.dim_txt
@@ -209,3 +212,48 @@ class Projectors(object):
         return(proj,oldproj)
         #m.decomposition[1].print()
         #print(m.first_occ)
+
+    def proj_old(self, m):
+        """
+        Construction of the projectors which previously already appeared in the
+        creation history
+        """
+
+        print("Old proj {0}={1}x{2}".format(m.dim_txt,m.parent1.dim_txt,8))
+        parents=",".join(obj.dim_txt for obj in reversed(m.parent_list()))+","+m.dim_txt
+        proj_name = "[P({0})]".format(parents)
+        rhs_proj_name = "[P({0})]".format(m.dim)
+        clebsch = "[C({0})]".format(parents[:parents.rindex(',')])
+        clebsch_idx = "("
+
+        for g in range(1,self.mults.gen):
+            clebsch_idx += "mu{0},".format(g)
+
+        colfac1 = ""
+        m.parent1.decompose()
+        for g in range(1,m.parent1.first_occ+1):
+            clebsch_idx += "mmu{0},".format(g)
+            colfac1 += "SUNT(mmu{0},i{0},j{0})*".format(g)
+        colfac1 += "SUNT(mu{0},i{0},j{0})".format(self.mults.gen)
+        clebsch_idx = clebsch_idx[:-1]
+        clebsch_idx += ")"
+        clebsch += clebsch_idx
+
+        colfac2 = ""
+        rhs_idx = "("
+        if m.first_occ==0:
+            colfac2 = "1"
+            rhs_proj_name = "1"
+            rhs_idx = ""
+        else:
+            for g in range(1,m.first_occ+1):
+                rhs_idx += "mnu{0},".format(g)
+                rhs_idx += "nu{0},".format(g)
+                colfac2 += "SUNT(mnu{0},jj{0},ii{0})*".format(g)
+            colfac2 = colfac2[:-1]
+            rhs_idx = rhs_idx[:-1]+")"
+
+        proj = f"L {proj_name}={clebsch}*{colfac1}*{colfac2}*{rhs_proj_name}{rhs_idx};\n"
+        print(proj)
+        print(m.first_occ)
+        print("first_occ",m.parent1.first_occ)
