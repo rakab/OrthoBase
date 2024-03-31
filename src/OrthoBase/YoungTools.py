@@ -1,6 +1,7 @@
 import z3
 #import pickle
 import copy
+import re
 from collections import Counter
 import logging
 logger = logging.getLogger(__name__)
@@ -12,42 +13,18 @@ database = {}
 class YoungTables(object):
     def __init__(self, obj, g=1):
         self.tables = obj
-        dims=list()
+        dims=set()
         for sol in self.tables:
-            dims.append(sol.dim)
             self.gen = g+1
-            conj_sol = sol.conjugate()
-            if len(sol.part_cols)>len(conj_sol.part_cols):
-                sol.dim_txt = str(sol.dim)+"b"
-            elif len(sol.part_cols)==len(conj_sol.part_cols) and sol.part_cols[-1] > conj_sol.part_cols[-1]:
-                sol.dim_txt = str(sol.dim)+"b"
-        #Recalculate dimensions if n and n-bar exist
-        #for i,d in enumerate(dims):
-            #if i == 0:
-                #continue
-            #for ii,dd in enumerate(dims[:i]):
-                #if d != dd:
-                    #continue
-                ##n and n-bar are the same, e.g. octet
-                #if self.tables[i].part_cols == self.tables[ii].part_cols:
-                    #continue
-                ##n and n-bar are different e.g. 10 and 10-bar
-                #sol_tomod = None
-                #if len(self.tables[i].part_cols)>len(self.tables[ii].part_cols):
-                    #sol_tomod = self.tables[i]
-                #elif len(self.tables[i].part_cols)<len(self.tables[ii].part_cols):
-                    #sol_tomod = self.tables[ii]
-                #else:
-                    #if self.tables[i].part_cols[-1] > self.tables[ii].part_cols[-1]:
-                        #sol_tomod = self.tables[i]
-                    #else:
-                        #sol_tomod = self.tables[ii]
-                #if sol_tomod is not None and sol_tomod.dim[-1]!='b':
-                    #sol_tomod.dim = sol_tomod.dim+'b'
-        ############################################
+            dims.add(sol.dim_txt)
+        self.dims = dims
 
     def __getitem__(self, i):
-        return self.tables[i]
+        if isinstance(i,int):
+            return self.tables[i]
+        elif isinstance(i,str):
+            return [tab for tab in self.tables if tab.dim_txt == i]
+
     def __len__(self):
         return len(self.tables)
 
@@ -64,64 +41,86 @@ class YoungTables(object):
         return(self.__class__(lst,self.gen))
 
     def print(self,latex=False):
+        print(self.dims)
+        for d in self.dims:
+            mults={tab for tab in self.tables if tab.dim_txt == d}
+            unique_shapes = len(set(tuple(m.part_rows) for m in mults))
+            if unique_shapes > 1:
+                for m in mults:
+                    #print(m.part_cols)
+                    m.dim_txt += "_"+f"({','.join(str(x) for x in m.part_cols)})"
         dims=list()
         for sol in self.tables:
             dims.append(sol.dim_txt)
         counts = Counter(dims)
-        sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: int(s[:-1]) if s.endswith('b') else int(s))(item[0])))
-        latex_code=""
-        normal=""
-        for mult, count in sorted_tables:
-            normal += "{0}*{1}+".format(count,mult)
-            if mult.endswith('b'):
-                latex_code += r"{0}\cdot \overline{{{1}}}\oplus ".format(count,mult[:-1])
-            else:
-                latex_code += r"{0}\cdot {1} \oplus ".format(count,mult)
-        latex_code = (lambda s: s.rsplit(' ', 1)[0])(latex_code[:-1])
+        pattern = r'(\d+)(?:b)?(?:_\(\d+(?:,\d+)*\))?'
+        #sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: int(s[:-1]) if s.endswith('b') else int(s))(item[0])))
+        sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: re.search(pattern, s).group(1))(item[0])))
         print("Total number of tables:", len(self.tables))
         print("Decomposition:")
         if latex:
+            latex_code=""
+            normal=""
+            for mult, count in sorted_tables:
+                normal += "{0}*{1}+".format(count,mult)
+
+                mult_name = re.search(r'(\d+)', mult).group(1)
+                has_b = 'b' in mult
+                subscript = re.search(r'_\((.*?)\)', mult)
+
+                # Build the LaTeX string
+                if has_b:
+                    latex_code += f'{count}\\cdot\\overline{{{mult_name}}}'
+                else:
+                    latex_code += f'{count}\\cdot {mult_name}'
+
+                if subscript:
+                    latex_code += f'_{{({subscript.group(1)})}}'
+                latex_code += r" \oplus "
+            latex_code = (lambda s: s.rsplit(' ', 1)[0])(latex_code[:-1])
             print(normal[:-1])
-            print(latex)
+            print("Latex source:")
+            print(latex_code)
         else:
+            normal=""
+            for mult, count in sorted_tables:
+                normal += "{0}*{1}+".format(count,mult)
             print(normal[:-1])
 
     def __iter__(self):
         return iter(self.tables)
 
 class YoungTable(object):
+    @staticmethod
+    def init_from_list(obj,Nc):
+        while obj[-1] == 0:
+            obj.remove(0)
+        while obj[0] == Nc and len(obj)>1:
+            obj.remove(Nc)
+        part_rows = obj
+        dims = (max(part_rows),len(part_rows))
+        table = {}
+        ncells = 0
+        for row in range(dims[0]):
+            for col in range(dims[1]):
+                if part_rows[col] > row:
+                    table[(row,col)] = 1
+                    ncells += 1
+                else:
+                    table[(row,col)] = 0
+        part_cols = list()
+        for i in range(part_rows[0]):
+            part_cols.append(sum(1 for j in part_rows if j>i))
+        return (part_rows,part_cols,dims,ncells,table)
+
     def __init__(self, obj, Nc, parent1=None, parent2=None):
         self.Nc = Nc
         self.init_parents(parent1,parent2)
         #part_cols - (partition by colons) how many colons are in each row
         #part_rows - (partition by rows) how many rows are in each column
         if isinstance(obj,list):
-            while obj[-1] == 0:
-                obj.remove(0)
-            while obj[0] == self.Nc and len(obj)>1:
-                obj.remove(self.Nc)
-            self.part_rows = obj
-            self.dims = (max(self.part_rows),len(self.part_rows))
-            table = {}
-            self.ncells = 0
-            for row in range(self.dims[0]):
-                for col in range(self.dims[1]):
-                    if self.part_rows[col] > row:
-                        table[(row,col)] = 1
-                        self.ncells += 1
-                    else:
-                        table[(row,col)] = 0
-            self.table = table
-            self.part_cols = list()
-            for i in range(self.part_rows[0]):
-                self.part_cols.append(sum(1 for j in self.part_rows if j>i))
+            self.part_rows,self.part_cols,self.dims,self.ncells,self.table = self.init_from_list(obj,self.Nc)
         elif isinstance(obj,dict):
-            #for col,row in obj:
-                #print(col,row)
-                #if prev_col != col:
-                    #print(col,prev_row)
-                #prev_col = col
-                #prev_row = row
             nrows = list(obj)[-1][0]+1
             ncols = list(obj)[-1][1]+1
             part_rows = list()
@@ -132,17 +131,19 @@ class YoungTable(object):
                         n = n+1
                 part_rows.append(n)
             self.__init__(part_rows,self.Nc,parent1,parent2)
-            #self.dims = (nrows,ncols)
-            #self.table = obj
-            #lst=[obj[i] for i in obj if obj[i]!=0]
-            #if lst:
-                #self.ncells = len(lst)
-            #else:
-                #self.ncells = 0
-            ##for col in ncols:
-                ##if row in
         self.dim = (self.calc_dim())
-        self.dim_txt = str(self.dim)
+        conj_rows = list()
+        for r in self.part_rows:
+            conj_rows.append(self.Nc-r)
+        conj_rows.append(self.Nc)
+        conj_rows.reverse()
+        conj_part_cols = self.init_from_list(conj_rows,self.Nc)[1]
+        if len(self.part_cols)>len(conj_part_cols):
+            self.dim_txt = str(self.dim)+"b"
+        elif len(self.part_cols)==len(conj_part_cols) and self.part_cols[-1] > conj_part_cols[-1]:
+            self.dim_txt = str(self.dim)+"b"
+        else:
+            self.dim_txt = str(self.dim)
 
     def init_parents(self,parent1,parent2):
         if parent1 is not None and parent1.parent1 is not None:
@@ -280,7 +281,7 @@ class YoungTable(object):
         sol = database.get((tuple(self.part_cols),tuple(other.part_cols)))
         if sol:
             #sol = pickle.loads(pickle.dumps(sol,-1))
-            sol = copy.deepcopy(sol)
+            #sol = copy.deepcopy(sol)
             for s in sol:
                 s.init_parents(self,other)
             return(YoungTables(sol))
@@ -351,6 +352,8 @@ class YoungTable(object):
             #z3.If(z3.Sum([x[(col,row)] for col in range (cols)])==0,x[(2,3)]==1,x[(2,3)]==1)
 
         #print(sol)
+        z3.set_param("parallel.enable", True)
+        #z3.set_param('parallel.threads.max', 4)
         num_solutions = 0
         solutions = list()
         while sol.check() == z3.sat:
