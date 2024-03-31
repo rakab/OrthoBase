@@ -10,7 +10,7 @@ logger.addHandler(logging.NullHandler())
 from .utils import *
 database = {}
 
-class YoungTables(object):
+class YoungTableaux(object):
     def __init__(self, obj, g=1):
         self.tables = obj
         dims=set()
@@ -37,7 +37,7 @@ class YoungTables(object):
         for res in results:
             for tab in res.tables:
                 lst.append(tab)
-        #YoungTables.gene += 1
+        #YoungTableaux.gene += 1
         return(self.__class__(lst,self.gen))
 
     def print(self,latex=False):
@@ -90,7 +90,7 @@ class YoungTables(object):
     def __iter__(self):
         return iter(self.tables)
 
-class YoungTable(object):
+class YoungTableau(object):
     @staticmethod
     def init_from_list(obj,Nc):
         while obj[-1] == 0:
@@ -264,7 +264,7 @@ class YoungTable(object):
         return copy_
 
     def __deepcopy__(self,memo):
-        #return YoungTable(self.table,self.Nc,self.parent1,self.parent2)
+        #return YoungTableau(self.table,self.Nc,self.parent1,self.parent2)
         copy_ = type(self).__new__(self.__class__)
         for attr in self.__dict__:
             if attr in ["parent1","parent2"]:
@@ -284,7 +284,7 @@ class YoungTable(object):
             #sol = copy.deepcopy(sol)
             for s in sol:
                 s.init_parents(self,other)
-            return(YoungTables(sol))
+            return(YoungTableaux(sol))
         block_num=99
         x = {}
         y = {}
@@ -381,4 +381,4 @@ class YoungTable(object):
             #break
         logger.debug(f"# Solutions: {num_solutions}")
         database[(tuple(self.part_cols),tuple(other.part_cols))] = solutions
-        return(YoungTables(solutions))
+        return(YoungTableaux(solutions))
