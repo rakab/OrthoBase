@@ -252,6 +252,7 @@ class YoungTableau(object):
             n = None
             print("This multiplet never appears in the product of adjoint representations.")
         else:
+            l = len(self.part_rows)
             a = self.__class__(self.part_rows[:l-n],self.Nc)
             b = self.__class__(self.part_rows[l-n:],self.Nc)
             c=[m for m in a*b if m.dim != self.dim]
