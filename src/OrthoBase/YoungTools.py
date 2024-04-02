@@ -241,20 +241,22 @@ class YoungTableau(object):
         for r in self.part_rows:
             conj_rows.append(self.Nc-r)
         l = int(len(self.part_rows)/2)
-        control = 0 #Helps to avoid looping back and forth
+        direction = 0 #Helps to avoid looping back and forth
         while l>0 and l<len(self.part_rows):
             m = sum(conj_rows[:l])
             n = sum(self.part_rows[l:])
             if m < n:
-                l = l+1
-                control += 1
+                new_direction = 1
+                l += 1
             elif m > n:
-                l = l-1
-                control -= 1
+                new_direction = -1
+                l -= 1
             else:
                 break
-            if control == 0:
+            if direction != 0 and direction != new_direction:
                 break
+            direction = new_direction
+
         if n==0:
             a = None
             b = None
