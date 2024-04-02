@@ -241,6 +241,8 @@ class YoungTableau(object):
             conj_rows.append(self.Nc-r)
         l = int(len(self.part_rows)/2)
         direction = 0 #Helps to avoid looping back and forth
+        m=0
+        n=0
         while l>0 and l<len(self.part_rows):
             m = sum(conj_rows[:l])
             n = sum(self.part_rows[l:])
