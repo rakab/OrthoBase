@@ -225,21 +225,32 @@ class YoungTableau(object):
         conj_rows = list()
         for r in self.part_rows:
             conj_rows.append(self.Nc-r)
-        l = len(self.part_rows)
-        while True:
-            m = sum(conj_rows[:int(l/2)])
-            n = sum(self.part_rows[int(l/2):])
+        l = int(len(self.part_rows)/2)
+        control = 0 #Helps to avoid looping back and forth
+        while l>0 and l<len(self.part_rows):
+            m = sum(conj_rows[:l])
+            n = sum(self.part_rows[l:])
             if m < n:
                 l = l+1
+                control += 1
             elif m > n:
                 l = l-1
+                control -= 1
             else:
+                break
+            if control == 0:
                 break
         if n==0:
             a = None
             b = None
             c = None
             logger.debug(f"Decomposition ended, firts occ: {n}")
+        elif m!=n:
+            a = None
+            b = None
+            c = None
+            n = None
+            print("This multiplet never appears in the product of adjoint representations.")
         else:
             a = self.__class__(self.part_rows[:l-n],self.Nc)
             b = self.__class__(self.part_rows[l-n:],self.Nc)
