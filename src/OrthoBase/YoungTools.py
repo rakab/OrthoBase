@@ -46,15 +46,14 @@ class YoungTableaux(object):
             mults={tab for tab in self.tables if tab.dim_txt == d}
             unique_shapes = len(set(tuple(m.part_rows) for m in mults))
             if unique_shapes > 1:
+                logger.info(f"Renaming ambiguous multiplets..")
                 for m in mults:
                     #print(m.part_cols)
                     m.dim_txt += "_"+f"({','.join(str(x) for x in m.part_cols)})"
-        dims=list()
-        for sol in self.tables:
-            dims.append(sol.dim_txt)
-        counts = Counter(dims)
+        counts = Counter([sol.dim_txt for sol in self.tables])
         pattern = r'(\d+)(?:b)?(?:_\(\d+(?:,\d+)*\))?'
         #sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: int(s[:-1]) if s.endswith('b') else int(s))(item[0])))
+        logger.info(f"Sorting multiplets for printing...")
         sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: int(re.search(pattern, s).group(1)))(item[0])))
         print("Total number of tables:", len(self.tables))
         print("Decomposition:")
@@ -281,27 +280,9 @@ class YoungTableau(object):
 
     def __copy__(self):
         copy_ = type(self).__new__(self.__class__)
-        for attr in self.__dict__:
-            copy_.__dict__[attr] = self.__dict__[attr]
-            #if attr in ["parent1","parent2"]:
-                # Make an actual copy of the attribute
-                #pass
-                #copy_.__dict__[attr] = copy.copy(self.__dict__[attr])
-            #else:
-                # Copy reference
-                #copy_.__dict__[attr] = self.__dict__[attr]
-        return copy_
-
-    def __deepcopy__(self,memo):
-        #return YoungTableau(self.table,self.Nc,self.parent1,self.parent2)
-        copy_ = type(self).__new__(self.__class__)
-        for attr in self.__dict__:
-            if attr in ["parent1","parent2"]:
-                # Make an actual copy of the attribute
-                copy_.__dict__[attr] = copy.copy(self.__dict__[attr])
-            else:
-                # Copy reference
-                copy_.__dict__[attr] = self.__dict__[attr]
+        copy_.__dict__.update(self.__dict__)
+        copy_.parent1 = None
+        copy_.parent2 = None
         return copy_
 
     def __mul__(self,other):
@@ -312,6 +293,7 @@ class YoungTableau(object):
             #sol = pickle.loads(pickle.dumps(sol,-1))
             #sol = copy.deepcopy(sol)
             for s in sol:
+                s = copy.copy(s)
                 s.init_parents(self,other)
             return(YoungTableaux(sol))
         block_num=99
