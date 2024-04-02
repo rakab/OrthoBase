@@ -187,6 +187,21 @@ class YoungTableau(object):
             print(u'\u2500', end=' ')
         print()
 
+    def __iter__(self):
+        self._index = 0
+        return self
+
+    def __next__(self):
+        if self._index >= len(self.table):
+            raise StopIteration
+        else:
+            item = list(self.table)[self._index]
+            position = self._index+1
+            self._index += 1
+            if self.table[item] == 0:
+                raise StopIteration
+            return item, position
+
     def relabel(self):
         table = list()
         for row in range(self.dims[0]):
