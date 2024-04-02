@@ -55,7 +55,7 @@ class YoungTableaux(object):
         counts = Counter(dims)
         pattern = r'(\d+)(?:b)?(?:_\(\d+(?:,\d+)*\))?'
         #sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: int(s[:-1]) if s.endswith('b') else int(s))(item[0])))
-        sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: re.search(pattern, s).group(1))(item[0])))
+        sorted_tables = sorted(counts.items(), key=lambda item: ((lambda s: int(re.search(pattern, s).group(1)))(item[0])))
         print("Total number of tables:", len(self.tables))
         print("Decomposition:")
         if latex:
