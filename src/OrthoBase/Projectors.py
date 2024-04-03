@@ -185,8 +185,12 @@ class Projectors(object):
         mu.... ---------   ......  ----------------- nu...
                          \       /
         """
-        y_qb = m.decomposition[0].conjugate()
+        y_qb = m.decomposition[0]
         y_q = m.decomposition[1]
+        if y_qb.ncells != m.first_occ:
+            y_qb = y_qb.conjugate()
+        elif y_q.ncells != m.first_occ:
+            y_q = y_q.conjugate()
         print("New proj {0}={1}x{2} decomposed as {3}x{4}".format(m.dim_txt,m.parent1.dim_txt,8,y_qb.dim,y_q.dim))
         m.print()
         #parents=",".join(obj.dim_txt for obj in reversed((lambda x: [x] + (lambda x: [x] + [x.parent1])(x.parent1) if x.parent1 else [x])(m)) if obj)
