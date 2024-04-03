@@ -1,7 +1,7 @@
 repeat id f1(a1?,?a)*f2(b1?,?b) = d_(a1,b1)*f1(?a)*f2(?b);
 id f1 = 1;
 id f2 = 1;
-id P8(mu?,nu?) = d_(mu,nu);
+id [P(8)](mu?,nu?) = d_(mu,nu);
 
 #call SUn
 id a = 1/2;

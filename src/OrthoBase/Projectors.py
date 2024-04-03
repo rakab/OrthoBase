@@ -58,6 +58,16 @@ class Projectors(object):
             raise TypeError("parallel_evaluation must hold a boolean value!")
         self._parallel_evaluation = value
 
+    @property
+    def FORM_np(self):
+        return(self._FORM_np)
+
+    @FORM_np.setter
+    def FORM_np(self,value):
+        if not isinstance(value, int):
+            raise TypeError("FORM_np must be an integer number of processes!")
+        self._FORM_np = value
+
     def run(self):
         logger.info("Building expressions of projectors")
         f_old = open(os.path.join(self.path,"old_projs.frm"), "w")
@@ -98,7 +108,7 @@ class Projectors(object):
 
         logger.info("Starting to run FORM")
         os.chdir(self.path)
-        process=subprocess.Popen(["tform","-w3","new_projs.frm"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        process=subprocess.Popen(["tform",f"-w{self.FORM_np}","new_projs.frm"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
         print("Program output:")
         stdout_lines = []
         while True:
