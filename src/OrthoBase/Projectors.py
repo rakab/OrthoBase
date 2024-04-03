@@ -4,10 +4,13 @@ import shutil
 import subprocess
 from itertools import product
 from importlib.resources import files as imp_files
+from mpi4py import MPI
+from mpi4py.futures import MPIPoolExecutor
 import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+from .utils import *
 
 class Projectors(object):
     def __init__(self, multiplets, path):
@@ -57,33 +60,41 @@ class Projectors(object):
 
     def run(self):
         logger.info("Building expressions of projectors")
+        f_old = open(os.path.join(self.path,"old_projs.frm"), "w")
+        f_old_list = open(os.path.join(self.path,"old_projs_list.frm"), "w")
         f_new = open(os.path.join(self.path,"new_projs.frm"), "w")
-        f_new_tmp = open(os.path.join(self.path,"new_projs_list.frm"), "w")
+        f_new_list = open(os.path.join(self.path,"new_projs_list.frm"), "w")
         f_new.write(imp_files('OrthoBase.FORMData').joinpath('header.frm').read_text())
         f_new.write('\n')
+        f_old.write(imp_files('OrthoBase.FORMData').joinpath('header.frm').read_text())
+        f_old.write('\n')
         oldproj_names = "CF "
+        clebsch_names = "CF "
+        clebsches = set()
         for m in self.mults:
-            #print("Constructing projector for ", m.dim)
             m.decompose()
-            #print("First occurence",m.first_occ)
-            #n=m
-            #gen=1
-            #while n.parent1 is not None:
-            #    gen+=1
-            #    n=n.parent1
-            #print("Generation",gen)
             if self.mults.gen==m.first_occ:
                 proj, oldproj = self.proj_new(m)
-                f_new_tmp.write(proj)
+                f_new_list.write(proj)
                 oldproj_names += oldproj + ","
             else:
-                self.proj_old(m)
+                clebsch,rhs_proj_name,projs = self.proj_old(m)
+                f_old_list.write("\n".join(projs))
+                f_old_list.write("****************\n")
+                clebsches.add(clebsch)
+                clebsches.add(rhs_proj_name)
+        clebsch_names += ",".join(clebsches)
+        f_old.write(clebsch_names+";\n\n")
+        f_old.write("#include old_projs_list.frm\n\n")
         f_new.write(oldproj_names[:-1]+";\n\n")
         f_new.write("#include new_projs_list.frm\n\n")
         #f_new.write("L test = SUNT;")
-        f_new.write(imp_files('OrthoBase.FORMData').joinpath('footer.frm').read_text())
-        f_new_tmp.close()
+        f_new.write(imp_files('OrthoBase.FORMData').joinpath('footer_new.frm').read_text())
+        f_old.write(imp_files('OrthoBase.FORMData').joinpath('footer_old.frm').read_text())
+        f_new_list.close()
         f_new.close()
+        f_old.close()
+        f_old_list.close()
 
         logger.info("Starting to run FORM")
         os.chdir(self.path)
@@ -99,10 +110,10 @@ class Projectors(object):
 
         stdout = "".join(stdout_lines)
 
-        #print(stdout)
+        print(stdout)
 
 
-    def yng_proj(self, y, i):
+    def yng_operator(self, y, i):
         """
         Construct a non-hermitian Young operator
         """
@@ -196,8 +207,8 @@ class Projectors(object):
         colfac2 = colfac2.replace("j","rj")
         colfac2 = colfac2.replace("ri","jj")
         colfac2 = colfac2.replace("rj","ii")
-        y_q_code=self.yng_proj(y_q, "i")
-        y_qb_code=self.yng_proj(y_qb, "j")
+        y_q_code=self.yng_operator(y_q, "i")
+        y_qb_code=self.yng_operator(y_qb, "j")
         #Subtract the rest
         subtr = "("
         for pM in m.decomposition[2]:
@@ -221,7 +232,7 @@ class Projectors(object):
 
         print("Old proj {0}={1}x{2}".format(m.dim_txt,m.parent1.dim_txt,8))
         parents=",".join(obj.dim_txt for obj in reversed(m.parent_list()))+","+m.dim_txt
-        proj_name = "[P({0})]".format(parents)
+        proj_name = "[C({0})]".format(parents)
         rhs_proj_name = "[P({0})]".format(m.dim)
         clebsch = "[C({0})]".format(parents[:parents.rindex(',')])
         clebsch_idx = "("
@@ -231,18 +242,26 @@ class Projectors(object):
 
         colfac1 = ""
         m.parent1.decompose()
+        i_list = list()
+        j_list = list()
         for g in range(1,m.parent1.first_occ+1):
             clebsch_idx += "mmu{0},".format(g)
             colfac1 += "SUNT(mmu{0},i{0},j{0})*".format(g)
+            i_list.append(f"i{g}")
+            j_list.append(f"j{g}")
         colfac1 += "SUNT(mu{0},i{0},j{0})".format(self.mults.gen)
+        i_list.append(f"i{self.mults.gen}")
+        j_list.append(f"j{self.mults.gen}")
         clebsch_idx = clebsch_idx[:-1]
         clebsch_idx += ")"
-        clebsch += clebsch_idx
 
+        ii_list = list()
+        jj_list = list()
         colfac2 = ""
         rhs_idx = "("
         if m.first_occ==0:
-            colfac2 = "1"
+            #colfac2 = "1"
+            colfac2 = "d_(nu1,nu2)"
             rhs_proj_name = "1"
             rhs_idx = ""
         else:
@@ -250,10 +269,25 @@ class Projectors(object):
                 rhs_idx += "mnu{0},".format(g)
                 rhs_idx += "nu{0},".format(g)
                 colfac2 += "SUNT(mnu{0},jj{0},ii{0})*".format(g)
+                ii_list.append(f"ii{g}")
+                jj_list.append(f"jj{g}")
             colfac2 = colfac2[:-1]
             rhs_idx = rhs_idx[:-1]+")"
 
-        proj = f"L {proj_name}={clebsch}*{colfac1}*{colfac2}*{rhs_proj_name}{rhs_idx};\n"
-        print(proj)
-        print(m.first_occ)
-        print("first_occ",m.parent1.first_occ)
+        perms_ij  = list(product(i_list,j_list))
+        perms_iii = list(product(i_list,ii_list))
+        perms_iijj= list(product(ii_list,jj_list))
+        perms_jjj = list(product(j_list,jj_list))
+        all_perms = perms_ij+perms_iii+perms_iijj+perms_jjj
+        logger.debug(f"Indices to pair: i_list={i_list}, j_list={j_list}, ii_list={ii_list}, jj_list={jj_list}")
+        pairs=generate_pairings(all_perms,len(i_list)+len(ii_list))
+        results = list()
+        for n,pairing in enumerate(pairs):
+            proj_name_n = proj_name.replace("]", f"{n}]")
+            connector='*'.join(f'd_({i},{j})' for i, j in pairing)
+            proj = f"L {proj_name_n}={clebsch}{clebsch_idx}*{colfac1}*{colfac2}*{connector}*{rhs_proj_name}{rhs_idx};\n"
+            results.append(proj)
+            print(proj)
+        if rhs_proj_name == "1":
+            rhs_proj_name = ""
+        return(clebsch,rhs_proj_name,results)

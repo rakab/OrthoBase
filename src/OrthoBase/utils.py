@@ -22,7 +22,7 @@ def getDifferentSolutionMatrix(sol,mod, x, rows, cols):
 def member_of(sol, e, v):
     sol.add(z3.Or([e == i for i in v]))
 
-def generate_pairings(perms):
+def generate_pairings(perms, nconns):
     """
     Create all possible connections of indices.
     Primaraly designed to fill in the treapezoid in Eq. (4.13) of
@@ -40,16 +40,18 @@ def generate_pairings(perms):
             generate_pairings(remaining,res,i+1)
     """
     stack = [(perms, [], 0)]
+    result = list()
 
     while stack:
         current_perms, res, i = stack.pop()
 
         if not len(current_perms):
-            if i == 2:
-                print(res)
+            if i == nconns:
+                result.append(res)
             continue
 
         for j, perm in enumerate(current_perms):
             remaining = [p for p in current_perms[j+1:] if ((p[0]!=perm[0] and p[0]!=perm[1]) and (p[1]!=perm[0] and p[1]!=perm[1]))]
             new_res = res + [perm]
             stack.append((remaining, new_res, i+1))
+    return result
