@@ -59,3 +59,11 @@ Refer to the [online documentation](https://orthobase.readthedocs.io) of our pac
 You can run the example calculation as follows:
 
 	$ ./demo.py
+
+## Current limitations
+
+- The automatic calculation of normalization factors is currently disabled.
+This feature will be implemented in an upcoming release.
+- The parallelization feature using `MPI` is a work in progress. For stable
+results, it is recommended to set `Projectors.parallel_evaluation = False`.
+However, you can still freely select the value of `Projectors.FORM_np`.
